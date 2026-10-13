@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Build output
+build/
+bin/
+
+# Object files
+*.o
+*.obj
+
+# Executables
+*.exe
+*.out
+*.app
+
+# VS Code
+.vscode/
+
+# CLion / JetBrains
+.idea/
+
+# Temporary files
+*.tmp
+*.log
