@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include "dashboard.h"
+#include "filters.h"
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -30,6 +31,23 @@ static void refreshData(DashboardViewData *data, const Sale sales[], int count)
     }
 }
 
+static const char *regions[] = {"All", "North", "South", "East", "West"};
+
+/* Compare all regions within the selected category, independently of the
+   selected region. Filtering is only repeated when the category changes. */
+static void refreshRegions(DashboardViewData *data, const Sale sales[], int count)
+{
+    static Sale regionSales[MAX_SALES];
+    double highest = 0;
+    for (int i = 0; i < 5; ++i) {
+        int n = filterSalesByRegion(sales, count, regions[i], regionSales, MAX_SALES);
+        data->regionStats[i] = calculateStats(regionSales, n);
+        if (i > 0 && data->regionStats[i].totalRevenue > highest)
+            highest = data->regionStats[i].totalRevenue;
+    }
+    data->regionalRevenueCeiling = highest > 0 ? highest * 1.10 : 1;
+}
+
 static void csvField(FILE *file, const char *value)
 {
     fputc('"', file);
@@ -40,15 +58,15 @@ static void csvField(FILE *file, const char *value)
     fputc('"', file);
 }
 
-static void exportData(const DashboardViewData *data, const char *region)
+static void exportData(const DashboardViewData *data, const DashboardFilters *filters)
 {
     /* Exclusive creation prevents overwriting an earlier report. */
     char filename[128];
     FILE *file = NULL;
     time_t timestamp = time(NULL);
     for (int attempt = 0; attempt < 100 && !file; ++attempt) {
-        snprintf(filename, sizeof filename, "exports/sales-%s-%lld-%d.csv",
-                 region, (long long)timestamp, attempt);
+        snprintf(filename, sizeof filename, "exports/sales-%s-category%d-%lld-%d.csv",
+                 regions[filters->region], filters->categoryIndex, (long long)timestamp, attempt);
 #ifdef _MSC_VER
         if (fopen_s(&file, filename, "wx") != 0) file = NULL;
 #else
@@ -65,51 +83,55 @@ static void exportData(const DashboardViewData *data, const char *region)
     }
     bool failed = ferror(file) != 0;
     if (fclose(file) != 0) failed = true;
-    setDashboardNotice(failed ? "Could not finish writing the CSV report." : "Region report saved to exports/");
+    setDashboardNotice(failed ? "Could not finish writing the CSV report." : "Filtered report saved to exports/");
 }
 
 int main(void)
 {
     static Sale sales[MAX_SALES];
     static Sale filteredSales[MAX_SALES];
-    static const char *regions[] = {"All", "North", "South", "East", "West"};
+    static Sale categorySales[MAX_SALES];
     DashboardViewData data = {0};
     int count = loadSales("data/sales.csv", sales, MAX_SALES);
     if (count < 0) {
         fprintf(stderr, "Cannot load data/sales.csv. Run from the project root.\n");
         return 1;
     }
-    RegionFilter selectedRegion = REGION_ALL;
+    DashboardFilters filters = {REGION_ALL, 0};
     int previousRegion = -1;
+    int previousCategory = -1;
+    int categorySalesCount = 0;
     data.loadedCount = count;
-    for (int i = 0; i < 5; ++i) {
-        int n = filterSalesByRegion(sales, count, regions[i], filteredSales, MAX_SALES);
-        data.regionStats[i] = calculateStats(filteredSales, n);
-    }
-    for (int i = 0; i < 5; ++i)
-        data.regionShare[i] = data.regionStats[0].totalRevenue > 0
-            ? data.regionStats[i].totalRevenue / data.regionStats[0].totalRevenue * 100 : 0;
+    data.categoryOptionCount = calculateCategoryRevenue(sales, count, data.categoryOptions, MAX_CATEGORIES);
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
     InitWindow(1440, 960, "BIDashboard | Business Intelligence Dashboard");
-    MaximizeWindow();
     SetWindowMinSize(1080, 720);
     SetExitKey(KEY_NULL);
     if (!DirectoryExists("exports")) MakeDirectory("exports");
     initDashboard();
+    MaximizeWindow();
     SetTargetFPS(60);
     while (!WindowShouldClose()) {
-        updateDashboardInput(&selectedRegion);
+        updateDashboardInput(&filters, &data);
         bool snapshotRequested = IsKeyPressed(KEY_F10) || takeDashboardSnapshotRequest();
-        if ((int)selectedRegion != previousRegion) {
-            int filteredCount = filterSalesByRegion(sales, count, regions[selectedRegion],
+        bool categoryChanged = filters.categoryIndex != previousCategory;
+        if (categoryChanged) {
+            const char *category = filters.categoryIndex == 0 ? NULL
+                : data.categoryOptions[filters.categoryIndex - 1].name;
+            categorySalesCount = filterSalesByCategory(sales, count, category, categorySales, MAX_SALES);
+            refreshRegions(&data, categorySales, categorySalesCount);
+            previousCategory = filters.categoryIndex;
+        }
+        if ((int)filters.region != previousRegion || categoryChanged) {
+            int filteredCount = filterSalesByRegion(categorySales, categorySalesCount, regions[filters.region],
                                                     filteredSales, MAX_SALES);
             refreshData(&data, filteredSales, filteredCount);
-            previousRegion = (int)selectedRegion;
+            previousRegion = (int)filters.region;
         }
-        if (takeDashboardExportRequest()) exportData(&data, regions[selectedRegion]);
+        if (takeDashboardExportRequest()) exportData(&data, &filters);
         BeginDrawing();
-        drawDashboard(&data, &selectedRegion);
+        drawDashboard(&data, &filters);
         EndDrawing();
         if (snapshotRequested) {
             char filename[128];
@@ -117,7 +139,7 @@ int main(void)
             for (int attempt = 0; attempt < 100; ++attempt) {
                 snprintf(filename, sizeof filename, "exports/dashboard-%lld-%d.png", (long long)timestamp, attempt);
                 if (!FileExists(filename)) {
-                    bool saved = saveDashboardSnapshot(filename, &data, &selectedRegion);
+                    bool saved = saveDashboardSnapshot(filename, &data, &filters);
                     setDashboardNotice(saved ? "Dashboard snapshot saved to exports/" : "Could not save the dashboard snapshot.");
                     break;
                 }
