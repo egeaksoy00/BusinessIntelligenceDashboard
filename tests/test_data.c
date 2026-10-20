@@ -3,22 +3,28 @@
 
 int main(void)
 {
-    Sale sale1 = {
-        1,
-        "2026-01-05",
-        "Electronics",
-        "North",
-        1200.0,
-        800.0
-    };
+    Sale sales[MAX_SALES];
 
-    printf("Transaction ID: %d\n", sale1.id);
-    printf("Date: %s\n", sale1.date);
-    printf("Category: %s\n", sale1.category);
-    printf("Region: %s\n", sale1.region);
-    printf("Revenue: %.2f\n", sale1.revenue);
-    printf("Cost: %.2f\n", sale1.cost);
-    printf("Profit: %.2f\n", sale1.revenue - sale1.cost);
+    // Step 1: Load CSV data.
+    int count = loadSales(
+        "data/sales.csv",
+        sales,
+        MAX_SALES
+    );
+
+    if (count < 0)
+    {
+        printf("Failed to load sales data.\n");
+        return 1;
+    }
+
+    printf("Successfully loaded %d sales records.\n", count);
+
+    // Step 2: Calculate dashboard statistics.
+    DashboardStats stats = calculateStats(sales, count);
+
+    // Step 3: Print results.
+    printStats(stats);
 
     return 0;
 }
