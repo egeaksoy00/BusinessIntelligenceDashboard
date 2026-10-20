@@ -84,3 +84,43 @@ void printStats(DashboardStats stats)
 
     printf("===========================================\n");
 }
+
+void calculateMonthlyRevenue(
+    const Sale sales[],
+    int count,
+    double monthlyRevenue[MONTH_COUNT]
+)
+{
+    // Initialize all months to zero.
+    for (int i = 0; i < MONTH_COUNT; i++)
+    {
+        monthlyRevenue[i] = 0.0;
+    }
+
+    if (sales == NULL || count <= 0)
+    {
+        return;
+    }
+
+    // Process each sale.
+    for (int i = 0; i < count; i++)
+    {
+        int year;
+        int month;
+        int day;
+
+        // Extract year, month and day from YYYY-MM-DD.
+        int parsed = sscanf(
+            sales[i].date,
+            "%4d-%2d-%2d",
+            &year,
+            &month,
+            &day
+        );
+
+        if (parsed == 3 && month >= 1 && month <= 12)
+        {
+            monthlyRevenue[month - 1] += sales[i].revenue;
+        }
+    }
+}

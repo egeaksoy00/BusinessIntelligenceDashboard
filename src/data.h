@@ -33,4 +33,11 @@ DashboardStats calculateStats(const Sale sales[], int count);
 // Print KPI results to the terminal for testing.
 void printStats(DashboardStats stats);
 
+// Calculate total revenue for each month (January to December).
+void calculateMonthlyRevenue(
+    const Sale sales[],
+    int count,
+    double monthlyRevenue[MONTH_COUNT]
+);
+
 #endif
