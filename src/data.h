@@ -22,4 +22,15 @@ typedef struct {
     double averageOrderValue;
 } DashboardStats;
 
+// Load sales records from a CSV file.
+// Returns the number of successfully loaded records.
+// Returns -1 if the file cannot be opened or arguments are invalid.
+int loadSales(const char *filename, Sale sales[], int maxSales);
+
+// Calculate dashboard KPIs using the loaded sales.
+DashboardStats calculateStats(const Sale sales[], int count);
+
+// Print KPI results to the terminal for testing.
+void printStats(DashboardStats stats);
+
 #endif
