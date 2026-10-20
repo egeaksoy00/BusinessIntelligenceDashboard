@@ -454,6 +454,85 @@ static void drawMix(const DashboardViewData *data,Rectangle r)
     }
 }
 
+/* The controller already supplies category-filtered totals for every region.
+   Only radial scaling and hover presentation are performed here. */
+static void drawRegionCompass(const DashboardViewData *data,const DashboardFilters *filters,Rectangle r)
+{
+    panel(r);
+    label("Regional compass",r.x+24,r.y+22,20,text);
+    char subtitle[80];
+    snprintf(subtitle,sizeof subtitle,"%s / Revenue by region",selectedCategoryName(data,filters));
+    clipped(subtitle,r.x+24,r.y+51,r.width-48,14,muted);
+
+    Vector2 center=point(r.x+r.width/2,r.y+182);
+    const float radius=54;
+    const Vector2 direction[5]={{0,0},{0,-1},{0,1},{1,0},{-1,0}};
+    const float angle[5]={0,-90,90,0,180};
+    Rectangle labels[5]={{0}};
+    labels[REGION_NORTH]=rect(center.x-70,r.y+78,140,39);
+    labels[REGION_SOUTH]=rect(center.x-70,r.y+242,140,39);
+    labels[REGION_EAST]=rect(r.x+r.width-128,center.y-16,104,40);
+    labels[REGION_WEST]=rect(r.x+24,center.y-16,104,40);
+
+    int active=0;
+    Vector2 pointer=mouse();
+    float dx=pointer.x-center.x,dy=pointer.y-center.y;
+    if(hover(rect(center.x-radius-8,center.y-radius-8,(radius+8)*2,(radius+8)*2))&&
+       dx*dx+dy*dy<=(radius+8)*(radius+8)&&dx*dx+dy*dy>100) {
+        active=fabsf(dy)>=fabsf(dx)?(dy<0?REGION_NORTH:REGION_SOUTH):
+                                    (dx>0?REGION_EAST:REGION_WEST);
+    }
+    for(int i=1;i<=4;i++) if(hover(labels[i])) active=i;
+
+    char badge[32];
+    if(active) snprintf(badge,sizeof badge,"%d orders",data->regionStats[active].totalOrders);
+    else snprintf(badge,sizeof badge,"4 regions");
+    Rectangle badgeBounds=rect(r.x+r.width-122,r.y+19,98,27);
+    rounded(badgeBounds,raised); centered(badge,badgeBounds,14,active?accent:muted);
+
+    DrawCircleLinesV(center,radius,edge);
+    DrawCircleLinesV(center,radius/2,ColorLerp(surface,edge,0.75f));
+    line(center.x-radius-6,center.y,center.x+radius+6,center.y,edge);
+    line(center.x,center.y-radius-6,center.x,center.y+radius+6,edge);
+
+    for(int i=1;i<=4;i++) {
+        Vector2 outer=point(center.x+direction[i].x*radius,center.y+direction[i].y*radius);
+        DrawCircleV(outer,2,subtle);
+        double fraction=data->regionalRevenueCeiling>0?
+            data->regionStats[i].totalRevenue/data->regionalRevenueCeiling:0;
+        float length=radius*(float)fmin(fmax(fraction,0),1);
+        if(length>0) {
+            DrawCircleSector(center,length,angle[i]-32,angle[i]+32,24,Fade(accent,active==i?0.55f:0.25f));
+            DrawCircleSectorLines(center,length,angle[i]-32,angle[i]+32,24,Fade(accent,active==i?1:0.7f));
+            Vector2 tip=point(center.x+direction[i].x*length,center.y+direction[i].y*length);
+            DrawCircleV(tip,active==i?4.0f:2.5f,accent);
+        }
+
+        char amount[64]; money(amount,sizeof amount,data->regionStats[i].totalRevenue);
+        Color nameColor=active==i?accent:muted;
+        Rectangle bounds=labels[i];
+        if(i==REGION_EAST) {
+            rightLabel(regionNames[i],bounds.x+bounds.width,bounds.y,14,nameColor);
+            rightLabel(amount,bounds.x+bounds.width,bounds.y+20,15,text);
+        } else if(i==REGION_WEST) {
+            label(regionNames[i],bounds.x,bounds.y,14,nameColor);
+            label(amount,bounds.x,bounds.y+20,15,text);
+        } else {
+            centered(regionNames[i],rect(bounds.x,bounds.y,bounds.width,18),14,nameColor);
+            centered(amount,rect(bounds.x,bounds.y+20,bounds.width,18),15,text);
+        }
+    }
+    DrawCircleV(center,9,surface);
+    DrawCircleLinesV(center,9,accent);
+    DrawCircleV(center,2,accent);
+
+    char axis[64];
+    if(data->regionalRevenueCeiling>=1000)
+        snprintf(axis,sizeof axis,"$0 - $%.1fk / radial scale",data->regionalRevenueCeiling/1000);
+    else snprintf(axis,sizeof axis,"$0 - $%.0f / radial scale",data->regionalRevenueCeiling);
+    centered(axis,rect(r.x+20,r.y+r.height-22,r.width-40,16),14,subtle);
+}
+
 static bool contains(const char *hay,const char *needle)
 {
     if(!needle[0]) return true;
@@ -588,7 +667,10 @@ void drawDashboard(const DashboardViewData *data,DashboardFilters *filters)
     if(hover(snapshot)) SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     drawPeriod(data);
     if(page==0) {
-        drawKpis(data); drawMonthlyChart(rect(244,340,724,302),data->monthlyRevenue); drawMix(data,rect(988,340,424,302));
+        drawKpis(data); drawMonthlyChart(rect(244,340,724,302),data->monthlyRevenue);
+        Rectangle mixBounds=rect(988,340,424,302);
+        if(filters->region==REGION_ALL&&filters->categoryIndex>0) drawRegionCompass(data,filters,mixBounds);
+        else drawMix(data,mixBounds);
         drawTransactions(data); drawRegions(data,filters);
     } else drawTransactions(data);
     DrawCircleV(point(249,932),3,accent);

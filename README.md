@@ -102,6 +102,11 @@ No CSV processing or business calculations belong in drawing code.
   window icon. All categories restores the neutral white theme. Category legend
   colors stay consistent across regions; the dark base and readable text stay fixed.
 - Switch the monthly chart between Bars and Line. Hover to inspect exact values.
+- With All regions and one selected category, Revenue mix becomes a regional
+  compass: North is above, South below, East right, and West left. Petal radius
+  represents revenue on the same zero-based scale as the regional bars. Each
+  direction displays its exact revenue; hovering shows its order count. Other
+  filter combinations keep the existing category mix view.
 - Open Transactions for the full record explorer. Search by ID, date, category,
   or region. Click DATE or REVENUE to toggle sorting; use arrows for pagination.
 - Search accepts typing and Ctrl+V. Delete clears the query; Escape clears it and
