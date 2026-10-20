@@ -185,3 +185,43 @@ int calculateCategoryRevenue(
 
     return categoryCount;
 }
+
+int filterSalesByRegion(
+    const Sale sales[],
+    int count,
+    const char *region,
+    Sale filteredSales[],
+    int maxFiltered
+)
+{
+    if (sales == NULL ||
+        region == NULL ||
+        filteredSales == NULL ||
+        count <= 0 ||
+        maxFiltered <= 0)
+    {
+        return 0;
+    }
+
+    int filteredCount = 0;
+
+    for (int i = 0; i < count; i++)
+    {
+        // Include all sales if the selected region is "All".
+        if (strcmp(region, "All") == 0 ||
+            strcmp(sales[i].region, region) == 0)
+        {
+            if (filteredCount >= maxFiltered)
+            {
+                fprintf(stderr,
+                        "Warning: Filtered sales capacity reached.\n");
+                break;
+            }
+
+            filteredSales[filteredCount] = sales[i];
+            filteredCount++;
+        }
+    }
+
+    return filteredCount;
+}

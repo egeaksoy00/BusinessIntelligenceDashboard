@@ -53,4 +53,14 @@ int calculateCategoryRevenue(
     int maxCategories
 );
 
+// Filter sales by region.
+// Returns the number of matching records.
+int filterSalesByRegion(
+    const Sale sales[],
+    int count,
+    const char *region,
+    Sale filteredSales[],
+    int maxFiltered
+);
+
 #endif

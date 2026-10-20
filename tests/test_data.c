@@ -93,5 +93,73 @@ printf("--------------------------------------\n");
 printf("Total:           %.2f\n", categoryTotal);
 printf("======================================\n");
 
-    return 0;
+    
+
+// Step 6: Test region filtering.
+Sale filteredSales[MAX_SALES];
+
+const char *selectedRegion = "North";
+
+int filteredCount = filterSalesByRegion(
+    sales,
+    count,
+    selectedRegion,
+    filteredSales,
+    MAX_SALES
+);
+
+printf("\n========== REGION FILTER ==========\n");
+printf("Selected Region: %s\n", selectedRegion);
+printf("Matching Records: %d\n", filteredCount);
+
+// Calculate KPIs using filtered sales.
+DashboardStats filteredStats = calculateStats(
+    filteredSales,
+    filteredCount
+);
+
+printStats(filteredStats);
+
+// Calculate monthly revenue using filtered sales.
+double filteredMonthlyRevenue[MONTH_COUNT];
+
+calculateMonthlyRevenue(
+    filteredSales,
+    filteredCount,
+    filteredMonthlyRevenue
+);
+
+printf("\n====== FILTERED MONTHLY REVENUE ======\n");
+
+for (int i = 0; i < MONTH_COUNT; i++)
+{
+    printf(
+        "%-12s %.2f\n",
+        monthNames[i],
+        filteredMonthlyRevenue[i]
+    );
+}
+
+// Calculate category revenue using filtered sales.
+CategoryRevenue filteredCategories[MAX_CATEGORIES];
+
+int filteredCategoryCount = calculateCategoryRevenue(
+    filteredSales,
+    filteredCount,
+    filteredCategories,
+    MAX_CATEGORIES
+);
+
+printf("\n====== FILTERED CATEGORY REVENUE ======\n");
+
+for (int i = 0; i < filteredCategoryCount; i++)
+{
+    printf(
+        "%-15s %.2f\n",
+        filteredCategories[i].name,
+        filteredCategories[i].revenue
+    );
+}
+
+return 0;
 }
