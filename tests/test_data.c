@@ -1,32 +1,64 @@
 #include <stdio.h>
+#include <assert.h>
+#include <math.h>
+#include <string.h>
+
 #include "../src/data.h"
 
-int main(void)
+#define EPSILON 0.001
+
+void testCSVLoading(void)
 {
     Sale sales[MAX_SALES];
 
-    // Step 1: Load CSV data.
     int count = loadSales(
         "data/sales.csv",
         sales,
         MAX_SALES
     );
 
-    if (count < 0)
-    {
-        printf("Failed to load sales data.\n");
-        return 1;
-    }
+    assert(count == 12);
+    assert(sales[0].id == 1);
+    assert(strcmp(sales[0].category, "Electronics") == 0);
 
-    printf("Successfully loaded %d sales records.\n", count);
+    printf("[PASS] CSV Loading\n");
+}
 
-    // Step 2: Calculate dashboard statistics.
+void testKPICalculations(void)
+{
+    Sale sales[MAX_SALES];
+
+    int count = loadSales(
+        "data/sales.csv",
+        sales,
+        MAX_SALES
+    );
+
+    assert(count == 12);
+
     DashboardStats stats = calculateStats(sales, count);
 
-    // Step 3: Print KPI results.
-    printStats(stats);
+    assert(fabs(stats.totalRevenue - 11000.0) < EPSILON);
+    assert(fabs(stats.totalCost - 6530.0) < EPSILON);
+    assert(fabs(stats.totalProfit - 4470.0) < EPSILON);
+    assert(stats.totalOrders == 12);
+    assert(fabs(stats.averageOrderValue - 916.6667) < EPSILON);
 
-    // Step 4: Calculate monthly revenue.
+    printf("[PASS] KPI Calculations\n");
+}
+
+void testMonthlyRevenue(void)
+{
+    Sale sales[MAX_SALES];
+
+    int count = loadSales(
+        "data/sales.csv",
+        sales,
+        MAX_SALES
+    );
+
+    assert(count == 12);
+
     double monthlyRevenue[MONTH_COUNT];
 
     calculateMonthlyRevenue(
@@ -35,131 +67,162 @@ int main(void)
         monthlyRevenue
     );
 
-    // Step 5: Print monthly revenue.
-    const char *monthNames[MONTH_COUNT] = {
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
+    assert(fabs(monthlyRevenue[0] - 2000.0) < EPSILON);
+    assert(fabs(monthlyRevenue[1] - 2770.0) < EPSILON);
+    assert(fabs(monthlyRevenue[2] - 3330.0) < EPSILON);
+    assert(fabs(monthlyRevenue[3] - 2900.0) < EPSILON);
+
+    for (int i = 4; i < MONTH_COUNT; i++)
+    {
+        assert(fabs(monthlyRevenue[i]) < EPSILON);
+    }
+
+    printf("[PASS] Monthly Revenue\n");
+}
+
+void testCategoryRevenue(void)
+{
+    Sale sales[MAX_SALES];
+
+    int count = loadSales(
+        "data/sales.csv",
+        sales,
+        MAX_SALES
+    );
+
+    assert(count == 12);
+
+    CategoryRevenue categories[MAX_CATEGORIES];
+
+    int categoryCount = calculateCategoryRevenue(
+        sales,
+        count,
+        categories,
+        MAX_CATEGORIES
+    );
+
+    assert(categoryCount == 3);
+
+    double electronics = 0.0;
+    double clothing = 0.0;
+    double food = 0.0;
+
+    for (int i = 0; i < categoryCount; i++)
+    {
+        if (strcmp(categories[i].name, "Electronics") == 0)
+        {
+            electronics = categories[i].revenue;
+        }
+        else if (strcmp(categories[i].name, "Clothing") == 0)
+        {
+            clothing = categories[i].revenue;
+        }
+        else if (strcmp(categories[i].name, "Food") == 0)
+        {
+            food = categories[i].revenue;
+        }
+    }
+
+    assert(fabs(electronics - 6600.0) < EPSILON);
+    assert(fabs(clothing - 2850.0) < EPSILON);
+    assert(fabs(food - 1550.0) < EPSILON);
+
+    printf("[PASS] Category Revenue\n");
+}
+
+void testRegionFiltering(void)
+{
+    Sale sales[MAX_SALES];
+    Sale filteredSales[MAX_SALES];
+
+    int count = loadSales(
+        "data/sales.csv",
+        sales,
+        MAX_SALES
+    );
+
+    assert(count == 12);
+
+    const char *regions[] = {
+        "All", "North", "South", "East", "West", "Unknown"
     };
 
-    printf("\n========== MONTHLY REVENUE ==========\n");
+    double expectedRevenue[] = {
+        11000.0, 2200.0, 2420.0, 3420.0, 2960.0, 0.0
+    };
 
-    for (int i = 0; i < MONTH_COUNT; i++)
+    int expectedOrders[] = {
+        12, 3, 3, 3, 3, 0
+    };
+
+    for (int i = 0; i < 6; i++)
     {
-        printf(
-            "%-12s %.2f\n",
-            monthNames[i],
-            monthlyRevenue[i]
+        int filteredCount = filterSalesByRegion(
+            sales,
+            count,
+            regions[i],
+            filteredSales,
+            MAX_SALES
+        );
+
+        DashboardStats stats = calculateStats(
+            filteredSales,
+            filteredCount
+        );
+
+        assert(filteredCount == expectedOrders[i]);
+        assert(stats.totalOrders == expectedOrders[i]);
+
+        assert(
+            fabs(stats.totalRevenue - expectedRevenue[i]) < EPSILON
         );
     }
 
-    printf("=====================================\n");
-
-    // Calculate category revenue.
-CategoryRevenue categories[MAX_CATEGORIES];
-
-int categoryCount = calculateCategoryRevenue(
-    sales,
-    count,
-    categories,
-    MAX_CATEGORIES
-);
-
-printf("\n========== CATEGORY REVENUE ==========\n");
-
-double categoryTotal = 0.0;
-
-for (int i = 0; i < categoryCount; i++)
-{
-    printf(
-        "%-15s %.2f\n",
-        categories[i].name,
-        categories[i].revenue
-    );
-
-    categoryTotal += categories[i].revenue;
+    printf("[PASS] Region Filtering\n");
 }
 
-printf("--------------------------------------\n");
-printf("Total:           %.2f\n", categoryTotal);
-printf("======================================\n");
-
-    
-
-// Step 6: Test region filtering.
-Sale filteredSales[MAX_SALES];
-
-const char *selectedRegion = "North";
-
-int filteredCount = filterSalesByRegion(
-    sales,
-    count,
-    selectedRegion,
-    filteredSales,
-    MAX_SALES
-);
-
-printf("\n========== REGION FILTER ==========\n");
-printf("Selected Region: %s\n", selectedRegion);
-printf("Matching Records: %d\n", filteredCount);
-
-// Calculate KPIs using filtered sales.
-DashboardStats filteredStats = calculateStats(
-    filteredSales,
-    filteredCount
-);
-
-printStats(filteredStats);
-
-// Calculate monthly revenue using filtered sales.
-double filteredMonthlyRevenue[MONTH_COUNT];
-
-calculateMonthlyRevenue(
-    filteredSales,
-    filteredCount,
-    filteredMonthlyRevenue
-);
-
-printf("\n====== FILTERED MONTHLY REVENUE ======\n");
-
-for (int i = 0; i < MONTH_COUNT; i++)
+void testErrorHandling(void)
 {
-    printf(
-        "%-12s %.2f\n",
-        monthNames[i],
-        filteredMonthlyRevenue[i]
+    Sale sales[MAX_SALES];
+
+    int count = loadSales(
+        "data/nonexistent.csv",
+        sales,
+        MAX_SALES
     );
+
+    assert(count == -1);
+
+    DashboardStats stats = calculateStats(NULL, 0);
+
+    assert(stats.totalRevenue == 0.0);
+    assert(stats.totalOrders == 0);
+
+    double monthlyRevenue[MONTH_COUNT];
+
+    calculateMonthlyRevenue(NULL, 0, monthlyRevenue);
+
+    for (int i = 0; i < MONTH_COUNT; i++)
+    {
+        assert(monthlyRevenue[i] == 0.0);
+    }
+
+    printf("[PASS] Error Handling\n");
 }
 
-// Calculate category revenue using filtered sales.
-CategoryRevenue filteredCategories[MAX_CATEGORIES];
-
-int filteredCategoryCount = calculateCategoryRevenue(
-    filteredSales,
-    filteredCount,
-    filteredCategories,
-    MAX_CATEGORIES
-);
-
-printf("\n====== FILTERED CATEGORY REVENUE ======\n");
-
-for (int i = 0; i < filteredCategoryCount; i++)
+int main(void)
 {
-    printf(
-        "%-15s %.2f\n",
-        filteredCategories[i].name,
-        filteredCategories[i].revenue
-    );
-}
+    printf("\n========== BACKEND TEST SUITE ==========\n\n");
 
-return 0;
+    testCSVLoading();
+    testKPICalculations();
+    testMonthlyRevenue();
+    testCategoryRevenue();
+    testRegionFiltering();
+    testErrorHandling();
+
+    printf("\nAll backend tests passed successfully!\n");
+    printf("========================================\n");
+
+    return 0;
 }
