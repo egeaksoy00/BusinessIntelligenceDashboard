@@ -186,11 +186,30 @@ bool takeDashboardExportRequest(void) { bool r=exportRequested; exportRequested=
 bool takeDashboardSnapshotRequest(void) { bool r=snapshotRequested; snapshotRequested=false; return r; }
 void setDashboardNotice(const char *message) { snprintf(notice,sizeof notice,"%s",message); noticeUntil=GetTime()+5; }
 
+static void moveTablePage(int direction)
+{
+    int maximum=matchCount>0?(matchCount-1)/visibleRows:0;
+    int next=tablePage+direction;
+    if(next<0) next=0;
+    if(next>maximum) next=maximum;
+    tablePage=next;
+}
+
 void updateDashboardInput(DashboardFilters *filters,const DashboardViewData *data)
 {
     transform(); SetMouseCursor(MOUSE_CURSOR_DEFAULT);
     applyCategoryTheme(data,filters);
     RegionFilter *selectedRegion=&filters->region;
+    if(!categoryOpen&&!regionOpen&&IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) searchFocus=hover(searchBounds());
+    bool shortcuts=!searchFocus&&!IsKeyDown(KEY_LEFT_CONTROL)&&!IsKeyDown(KEY_RIGHT_CONTROL)&&
+                   !IsKeyDown(KEY_LEFT_ALT)&&!IsKeyDown(KEY_RIGHT_ALT);
+    for(int i=0;i<9&&i<=data->categoryOptionCount;i++) {
+        if(shortcuts&&IsKeyPressed(KEY_F1+i)) {
+            filters->categoryIndex=i;
+            categoryOpen=false; regionOpen=false; tablePage=0;
+            applyCategoryTheme(data,filters);
+        }
+    }
     if(categoryOpen||regionOpen) {
         bool choosingRegion=regionOpen;
         if(IsKeyPressed(KEY_ESCAPE)) { categoryOpen=false; regionOpen=false; }
@@ -222,7 +241,7 @@ void updateDashboardInput(DashboardFilters *filters,const DashboardViewData *dat
     if(click(rect(16,147,192,44))) { page=0; tablePage=0; searchFocus=false; }
     if(click(rect(16,199,192,44))) { page=1; tablePage=0; searchFocus=false; }
     for(int i=0;i<5;i++) {
-        if(!searchFocus&&IsKeyPressed(KEY_ONE+i)) *selectedRegion=(RegionFilter)i;
+        if(shortcuts&&IsKeyPressed(KEY_ONE+i)) *selectedRegion=(RegionFilter)i;
     }
     if(page==0) {
         if(click(rect(814,361,64,28))) lineChart=false;
@@ -230,14 +249,13 @@ void updateDashboardInput(DashboardFilters *filters,const DashboardViewData *dat
         for(int i=0;i<4;i++) if(click(regionRow(i))) *selectedRegion=(RegionFilter)(i+1);
     }
     if(*selectedRegion!=lastRegion) { tablePage=0; lastRegion=*selectedRegion; }
-    if(click(rect(1240,49,172,40))) exportRequested=true;
+    if(click(rect(1240,49,172,40))||(shortcuts&&(IsKeyPressed(KEY_ENTER)||IsKeyPressed(KEY_KP_ENTER)))) exportRequested=true;
     if(click(rect(1050,49,174,40))) snapshotRequested=true;
-    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) searchFocus=hover(searchBounds());
     int ch=GetCharPressed();
     while(ch>0) {
         size_t n=strlen(query);
         if(searchFocus&&ch>=32&&ch<=126&&n+1<sizeof query) { query[n]=(char)ch; query[n+1]='\0'; tablePage=0; }
-        if(!searchFocus&&ch>='1'&&ch<='5') { *selectedRegion=(RegionFilter)(ch-'1'); tablePage=0; }
+        if(shortcuts&&ch>='1'&&ch<='5') { *selectedRegion=(RegionFilter)(ch-'1'); tablePage=0; }
         ch=GetCharPressed();
     }
     if(searchFocus&&(IsKeyPressed(KEY_BACKSPACE)||IsKeyPressedRepeat(KEY_BACKSPACE))) {
@@ -255,8 +273,9 @@ void updateDashboardInput(DashboardFilters *filters,const DashboardViewData *dat
     Rectangle t=tableBounds();
     if(click(rect(t.x+140,t.y+65,120,28))) { sortMode=sortMode==1?0:1; tablePage=0; }
     if(click(rect(t.x+t.width-148,t.y+65,120,28))) { sortMode=sortMode==2?3:2; tablePage=0; }
-    if(click(rect(t.x+t.width-84,t.y+t.height-31,28,24))&&tablePage>0) tablePage--;
-    if(click(rect(t.x+t.width-48,t.y+t.height-31,28,24))&&(tablePage+1)*visibleRows<matchCount) tablePage++;
+    bool tableKeys=shortcuts&&!searchFocus;
+    if(click(rect(t.x+t.width-84,t.y+t.height-31,28,24))||(tableKeys&&IsKeyPressed(KEY_LEFT))) moveTablePage(-1);
+    if(click(rect(t.x+t.width-48,t.y+t.height-31,28,24))||(tableKeys&&IsKeyPressed(KEY_RIGHT))) moveTablePage(1);
 }
 
 static void drawSidebar(const DashboardViewData *data)
@@ -293,7 +312,7 @@ static void drawSidebar(const DashboardViewData *data)
     DrawCircleV(point(34,782),3,accent); label("CSV CONNECTED",45,775,11,accent);
     label("sales.csv",30,800,18,text); label("Local data. Real insights.",30,832,12,muted);
     line(24,899,200,899,edge); DrawCircleV(point(40,930),15,raised);
-    centered("EA",rect(25,915,30,30),11,accent);
+    centered("EU",rect(25,915,30,30),11,accent);
     label("Ege & Umut",65,916,14,text); label("Advanced Programming",65,936,10,subtle);
 }
 
@@ -344,7 +363,11 @@ static void drawCategoryFilter(const DashboardViewData *data,const DashboardFilt
         if(active||hover(option)) rounded(option,active?ColorLerp(surface,accent,0.12f):raised);
         const char *name=i==0?"All categories":data->categoryOptions[i-1].name;
         if(i>0) DrawCircleV(point(option.x+13,option.y+17),3,categoryColor(name));
-        clipped(name,option.x+27,option.y+9,option.width-55,16,active?accent:text);
+        clipped(name,option.x+27,option.y+9,option.width-84,16,active?accent:text);
+        if(i<9) {
+            char key[8]; snprintf(key,sizeof key,"F%d",i+1);
+            rightLabel(key,option.x+option.width-28,option.y+10,14,active?accent:subtle);
+        }
         if(active) DrawCircleV(point(option.x+option.width-14,option.y+17),3,accent);
         if(hover(option)) SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     }
@@ -373,7 +396,8 @@ static void drawKpis(const DashboardViewData *data)
         Rectangle r=rect(244+i*296.0f,188,280,132); drawKpiCard(r,names[i],values[i]);
         if(i==0) { DrawRectangleRoundedLinesEx(r,0.14f,10,1,ColorLerp(edge,accent,0.38f)); rounded(rect(r.x+20,r.y+106,7,3),accent); }
         else DrawCircleV(point(r.x+24,r.y+108),2,accent);
-        label(notes[i],r.x+34,r.y+99,12,i==1?accent:subtle); icon(i==2?1:4,r.x+239,r.y+20,subtle);
+        label(notes[i],r.x+34,r.y+99,12,i==1?accent:subtle);
+        if(i==2) icon(1,r.x+239,r.y+20,subtle);
     }
 }
 
@@ -675,7 +699,8 @@ void drawDashboard(const DashboardViewData *data,DashboardFilters *filters)
     } else drawTransactions(data);
     DrawCircleV(point(249,932),3,accent);
     char status[128]; snprintf(status,sizeof status,"%d records  /  %s  /  %s",data->loadedCount,regionNames[*selectedRegion],selectedCategoryName(data,filters));
-    label(status,260,925,11,subtle); rightLabel("1-5  Switch region     /     F10  Save snapshot",1412,925,11,subtle);
+    label(status,260,925,11,subtle);
+    rightLabel("1-5 Regions / F1-F9 Categories / < > Pages / Enter CSV / F10 PNG",1412,925,14,subtle);
     if(!snapshotRendering&&GetTime()<noticeUntil) {
         float w=measure(notice,14)+48; rounded(rect(828-w/2,867,w,43),accent); centered(notice,rect(828-w/2,867,w,43),14,bg);
     }

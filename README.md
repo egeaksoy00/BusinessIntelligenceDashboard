@@ -97,6 +97,8 @@ No CSV processing or business calculations belong in drawing code.
   This filter combines with the region and applies to KPIs, charts, dates,
   transaction records, and CSV exports. Category options always come from the full
   dataset, so switching regions does not remove choices from the menu.
+- F1 selects All categories; F2-F9 select category options in their displayed order.
+  The category dropdown shows each shortcut. F10 remains reserved for PNG snapshots.
 - The accent color follows the selected category, including revenue bars/lines,
   buttons, selected states, the profitability ring, the sidebar mark, and the native
   window icon. All categories restores the neutral white theme. Category legend
@@ -108,11 +110,16 @@ No CSV processing or business calculations belong in drawing code.
   direction displays its exact revenue; hovering shows its order count. Other
   filter combinations keep the existing category mix view.
 - Open Transactions for the full record explorer. Search by ID, date, category,
-  or region. Click DATE or REVENUE to toggle sorting; use arrows for pagination.
+  or region. Click DATE or REVENUE to toggle sorting; use the on-screen arrows or
+  Left/Right arrow keys for pagination, including the Overview's recent records.
+  Page navigation stops at the first and last page.
 - Search accepts typing and Ctrl+V. Delete clears the query; Escape clears it and
   leaves the search field. Searching changes the table, not the dashboard KPIs.
 - Export CSV saves all records matching both filters, independent of the
   table search. Reports use unique names under exports/ and are excluded from Git.
+- Enter (including numpad Enter) triggers the same CSV export. Region/category,
+  pagination, and export shortcuts are disabled while typing in the search field.
+  An open dropdown also blocks Enter export and table navigation.
 - Save snapshot (or F10) saves a PNG to exports/. Close using the window's close button.
 
 The initial canvas is 1440 x 960 and scales uniformly when resized. The CSV is
