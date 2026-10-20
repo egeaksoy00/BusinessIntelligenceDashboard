@@ -3,6 +3,7 @@
 
 # Build output
 build/
+exports/
 bin/
 
 # Object files

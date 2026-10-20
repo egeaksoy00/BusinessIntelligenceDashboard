@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="BIDashboard logo">
+  <title>BIDashboard</title>
+  <desc>A bold B monogram built from two rounded data blocks on a lime tile.</desc>
+  <rect width="64" height="64" rx="16" fill="#c9f270"/>
+  <g fill="#0d1013">
+    <rect x="14" y="12" width="30" height="21" rx="9"/>
+    <rect x="14" y="29" width="35" height="23" rx="10"/>
+    <rect x="13" y="12" width="10" height="40"/>
+  </g>
+  <g fill="#c9f270">
+    <rect x="23" y="19" width="12" height="7" rx="3"/>
+    <rect x="23" y="36" width="17" height="8" rx="3.4"/>
+  </g>
+</svg>
