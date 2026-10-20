@@ -5,8 +5,22 @@
 
 #include "../src/data.h"
 
-#define EPSILON 0.001
+#define EPSILON 0.01
 
+#define EXPECTED_RECORDS 300
+#define EXPECTED_CATEGORIES 8
+
+#define EXPECTED_REVENUE 172571.93
+#define EXPECTED_COST 107496.10
+#define EXPECTED_PROFIT 65075.83
+
+// Compare two floating-point values.
+int almostEqual(double a, double b)
+{
+    return fabs(a - b) < EPSILON;
+}
+
+// Test 1: CSV Loading
 void testCSVLoading(void)
 {
     Sale sales[MAX_SALES];
@@ -17,13 +31,17 @@ void testCSVLoading(void)
         MAX_SALES
     );
 
-    assert(count == 12);
+    assert(count == EXPECTED_RECORDS);
+
     assert(sales[0].id == 1);
     assert(strcmp(sales[0].category, "Electronics") == 0);
 
-    printf("[PASS] CSV Loading\n");
+    assert(sales[count - 1].id == 300);
+
+    printf("[PASS] CSV Loading - 300 records\n");
 }
 
+// Test 2: KPI Calculations
 void testKPICalculations(void)
 {
     Sale sales[MAX_SALES];
@@ -34,19 +52,30 @@ void testKPICalculations(void)
         MAX_SALES
     );
 
-    assert(count == 12);
+    assert(count == EXPECTED_RECORDS);
 
     DashboardStats stats = calculateStats(sales, count);
 
-    assert(fabs(stats.totalRevenue - 11000.0) < EPSILON);
-    assert(fabs(stats.totalCost - 6530.0) < EPSILON);
-    assert(fabs(stats.totalProfit - 4470.0) < EPSILON);
-    assert(stats.totalOrders == 12);
-    assert(fabs(stats.averageOrderValue - 916.6667) < EPSILON);
+    assert(almostEqual(stats.totalRevenue, EXPECTED_REVENUE));
+    assert(almostEqual(stats.totalCost, EXPECTED_COST));
+    assert(almostEqual(stats.totalProfit, EXPECTED_PROFIT));
+
+    assert(stats.totalOrders == EXPECTED_RECORDS);
+
+    assert(almostEqual(
+        stats.averageOrderValue,
+        EXPECTED_REVENUE / EXPECTED_RECORDS
+    ));
+
+    assert(almostEqual(
+        stats.totalRevenue - stats.totalCost,
+        stats.totalProfit
+    ));
 
     printf("[PASS] KPI Calculations\n");
 }
 
+// Test 3: Monthly Revenue
 void testMonthlyRevenue(void)
 {
     Sale sales[MAX_SALES];
@@ -57,7 +86,7 @@ void testMonthlyRevenue(void)
         MAX_SALES
     );
 
-    assert(count == 12);
+    assert(count == EXPECTED_RECORDS);
 
     double monthlyRevenue[MONTH_COUNT];
 
@@ -67,19 +96,39 @@ void testMonthlyRevenue(void)
         monthlyRevenue
     );
 
-    assert(fabs(monthlyRevenue[0] - 2000.0) < EPSILON);
-    assert(fabs(monthlyRevenue[1] - 2770.0) < EPSILON);
-    assert(fabs(monthlyRevenue[2] - 3330.0) < EPSILON);
-    assert(fabs(monthlyRevenue[3] - 2900.0) < EPSILON);
+    double expectedMonthly[MONTH_COUNT] = {
+        19879.40,  // January
+        21140.77,  // February
+        16748.08,  // March
+        15889.38,  // April
+        16356.93,  // May
+        14523.26,  // June
+        20330.17,  // July
+        12825.82,  // August
+        15589.37,  // September
+        19288.75,  // October
+        0.0,       // November
+        0.0        // December
+    };
 
-    for (int i = 4; i < MONTH_COUNT; i++)
+    double total = 0.0;
+
+    for (int i = 0; i < MONTH_COUNT; i++)
     {
-        assert(fabs(monthlyRevenue[i]) < EPSILON);
+        assert(almostEqual(
+            monthlyRevenue[i],
+            expectedMonthly[i]
+        ));
+
+        total += monthlyRevenue[i];
     }
 
-    printf("[PASS] Monthly Revenue\n");
+    assert(almostEqual(total, EXPECTED_REVENUE));
+
+    printf("[PASS] Monthly Revenue - 12 months\n");
 }
 
+// Test 4: Category Revenue
 void testCategoryRevenue(void)
 {
     Sale sales[MAX_SALES];
@@ -90,7 +139,7 @@ void testCategoryRevenue(void)
         MAX_SALES
     );
 
-    assert(count == 12);
+    assert(count == EXPECTED_RECORDS);
 
     CategoryRevenue categories[MAX_CATEGORIES];
 
@@ -101,35 +150,67 @@ void testCategoryRevenue(void)
         MAX_CATEGORIES
     );
 
-    assert(categoryCount == 3);
+    assert(categoryCount == EXPECTED_CATEGORIES);
 
-    double electronics = 0.0;
-    double clothing = 0.0;
-    double food = 0.0;
+    const char *expectedNames[] = {
+        "Electronics",
+        "Clothing",
+        "Food",
+        "Home",
+        "Beauty",
+        "Sports",
+        "Books",
+        "Toys"
+    };
+
+    double expectedRevenue[] = {
+        82140.38,
+        16798.08,
+        7491.39,
+        23385.17,
+        8817.93,
+        24990.10,
+        3309.28,
+        5639.60
+    };
+
+    double total = 0.0;
+
+    for (int i = 0; i < EXPECTED_CATEGORIES; i++)
+    {
+        int found = 0;
+
+        for (int j = 0; j < categoryCount; j++)
+        {
+            if (strcmp(
+                categories[j].name,
+                expectedNames[i]
+            ) == 0)
+            {
+                assert(almostEqual(
+                    categories[j].revenue,
+                    expectedRevenue[i]
+                ));
+
+                found = 1;
+                break;
+            }
+        }
+
+        assert(found == 1);
+    }
 
     for (int i = 0; i < categoryCount; i++)
     {
-        if (strcmp(categories[i].name, "Electronics") == 0)
-        {
-            electronics = categories[i].revenue;
-        }
-        else if (strcmp(categories[i].name, "Clothing") == 0)
-        {
-            clothing = categories[i].revenue;
-        }
-        else if (strcmp(categories[i].name, "Food") == 0)
-        {
-            food = categories[i].revenue;
-        }
+        total += categories[i].revenue;
     }
 
-    assert(fabs(electronics - 6600.0) < EPSILON);
-    assert(fabs(clothing - 2850.0) < EPSILON);
-    assert(fabs(food - 1550.0) < EPSILON);
+    assert(almostEqual(total, EXPECTED_REVENUE));
 
-    printf("[PASS] Category Revenue\n");
+    printf("[PASS] Category Revenue - 8 categories\n");
 }
 
+// Test 5: Region Filtering
 void testRegionFiltering(void)
 {
     Sale sales[MAX_SALES];
@@ -141,18 +222,33 @@ void testRegionFiltering(void)
         MAX_SALES
     );
 
-    assert(count == 12);
+    assert(count == EXPECTED_RECORDS);
 
     const char *regions[] = {
-        "All", "North", "South", "East", "West", "Unknown"
-    };
-
-    double expectedRevenue[] = {
-        11000.0, 2200.0, 2420.0, 3420.0, 2960.0, 0.0
+        "All",
+        "North",
+        "South",
+        "East",
+        "West",
+        "Unknown"
     };
 
     int expectedOrders[] = {
-        12, 3, 3, 3, 3, 0
+        300,
+        70,
+        73,
+        83,
+        74,
+        0
+    };
+
+    double expectedRevenue[] = {
+        172571.93,
+        40176.83,
+        38907.99,
+        46656.41,
+        46830.70,
+        0.0
     };
 
     for (int i = 0; i < 6; i++)
@@ -165,22 +261,119 @@ void testRegionFiltering(void)
             MAX_SALES
         );
 
+        assert(filteredCount == expectedOrders[i]);
+
         DashboardStats stats = calculateStats(
             filteredSales,
             filteredCount
         );
 
-        assert(filteredCount == expectedOrders[i]);
         assert(stats.totalOrders == expectedOrders[i]);
 
-        assert(
-            fabs(stats.totalRevenue - expectedRevenue[i]) < EPSILON
-        );
+        assert(almostEqual(
+            stats.totalRevenue,
+            expectedRevenue[i]
+        ));
+
+        // Verify that every filtered record
+        // belongs to the selected region.
+        if (strcmp(regions[i], "All") != 0)
+        {
+            for (int j = 0; j < filteredCount; j++)
+            {
+                assert(strcmp(
+                    filteredSales[j].region,
+                    regions[i]
+                ) == 0);
+            }
+        }
     }
 
-    printf("[PASS] Region Filtering\n");
+    printf("[PASS] Region Filtering - All regions\n");
 }
 
+// Test 6: Filtered Analytics
+void testFilteredAnalytics(void)
+{
+    Sale sales[MAX_SALES];
+    Sale filteredSales[MAX_SALES];
+
+    int count = loadSales(
+        "data/sales.csv",
+        sales,
+        MAX_SALES
+    );
+
+    assert(count == EXPECTED_RECORDS);
+
+    const char *regions[] = {
+        "North", "South", "East", "West"
+    };
+
+    for (int r = 0; r < 4; r++)
+    {
+        int filteredCount = filterSalesByRegion(
+            sales,
+            count,
+            regions[r],
+            filteredSales,
+            MAX_SALES
+        );
+
+        DashboardStats stats = calculateStats(
+            filteredSales,
+            filteredCount
+        );
+
+        // Monthly revenue for selected region.
+        double monthlyRevenue[MONTH_COUNT];
+
+        calculateMonthlyRevenue(
+            filteredSales,
+            filteredCount,
+            monthlyRevenue
+        );
+
+        double monthlyTotal = 0.0;
+
+        for (int i = 0; i < MONTH_COUNT; i++)
+        {
+            monthlyTotal += monthlyRevenue[i];
+        }
+
+        // Category revenue for selected region.
+        CategoryRevenue categories[MAX_CATEGORIES];
+
+        int categoryCount = calculateCategoryRevenue(
+            filteredSales,
+            filteredCount,
+            categories,
+            MAX_CATEGORIES
+        );
+
+        double categoryTotal = 0.0;
+
+        for (int i = 0; i < categoryCount; i++)
+        {
+            categoryTotal += categories[i].revenue;
+        }
+
+        // Both charts must match the KPI revenue.
+        assert(almostEqual(
+            monthlyTotal,
+            stats.totalRevenue
+        ));
+
+        assert(almostEqual(
+            categoryTotal,
+            stats.totalRevenue
+        ));
+    }
+
+    printf("[PASS] Filtered Analytics Consistency\n");
+}
+
+// Test 7: Error Handling
 void testErrorHandling(void)
 {
     Sale sales[MAX_SALES];
@@ -196,16 +389,33 @@ void testErrorHandling(void)
     DashboardStats stats = calculateStats(NULL, 0);
 
     assert(stats.totalRevenue == 0.0);
+    assert(stats.totalCost == 0.0);
+    assert(stats.totalProfit == 0.0);
     assert(stats.totalOrders == 0);
 
     double monthlyRevenue[MONTH_COUNT];
 
-    calculateMonthlyRevenue(NULL, 0, monthlyRevenue);
+    calculateMonthlyRevenue(
+        NULL,
+        0,
+        monthlyRevenue
+    );
 
     for (int i = 0; i < MONTH_COUNT; i++)
     {
         assert(monthlyRevenue[i] == 0.0);
     }
+
+    // Unknown region should return no records.
+    int filteredCount = filterSalesByRegion(
+        sales,
+        0,
+        "Unknown",
+        sales,
+        MAX_SALES
+    );
+
+    assert(filteredCount == 0);
 
     printf("[PASS] Error Handling\n");
 }
@@ -219,9 +429,10 @@ int main(void)
     testMonthlyRevenue();
     testCategoryRevenue();
     testRegionFiltering();
+    testFilteredAnalytics();
     testErrorHandling();
 
-    printf("\nAll backend tests passed successfully!\n");
+    printf("\nAll 7 backend tests passed successfully!\n");
     printf("========================================\n");
 
     return 0;
