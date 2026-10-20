@@ -17,10 +17,36 @@ if(NOT raylib_FOUND)
 endif()
 
 include(CTest)
+
 if(BUILD_TESTING)
-    add_executable(test_filters tests/test_filters.c src/filters.c src/data.c)
+
+    # UI filtering tests
+    add_executable(test_filters
+        tests/test_filters.c
+        src/filters.c
+        src/data.c
+    )
+
     target_include_directories(test_filters PRIVATE src)
-    add_test(NAME dashboard_filters COMMAND test_filters)
+
+    add_test(
+        NAME dashboard_filters
+        COMMAND test_filters
+    )
+
+    # Backend data processing tests
+    add_executable(test_data
+        tests/test_data.c
+        src/data.c
+    )
+
+    target_include_directories(test_data PRIVATE src)
+
+    add_test(
+        NAME backend_data
+        COMMAND test_data
+    )
+
 endif()
 
 add_executable(bi_dashboard src/main.c src/dashboard.c src/data.c src/filters.c)
