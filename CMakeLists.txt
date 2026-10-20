@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(BusinessIntelligenceDashboard LANGUAGES C)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
@@ -16,7 +16,7 @@ if(NOT raylib_FOUND)
     FetchContent_MakeAvailable(raylib)
 endif()
 
-add_executable(bi_dashboard src/main.c src/dashboard.c)
+add_executable(bi_dashboard src/main.c src/dashboard.c src/data.c)
 target_link_libraries(bi_dashboard PRIVATE raylib)
 if(MSVC)
     target_compile_options(bi_dashboard PRIVATE /W4)
