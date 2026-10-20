@@ -30,14 +30,27 @@ int loadSales(const char *filename, Sale sales[], int maxSales);
 // Calculate dashboard KPIs using the loaded sales.
 DashboardStats calculateStats(const Sale sales[], int count);
 
+
 // Print KPI results to the terminal for testing.
 void printStats(DashboardStats stats);
+
+typedef struct {
+    char name[30];
+    double revenue;
+} CategoryRevenue;
 
 // Calculate total revenue for each month (January to December).
 void calculateMonthlyRevenue(
     const Sale sales[],
     int count,
     double monthlyRevenue[MONTH_COUNT]
+);
+
+int calculateCategoryRevenue(
+    const Sale sales[],
+    int count,
+    CategoryRevenue categories[],
+    int maxCategories
 );
 
 #endif

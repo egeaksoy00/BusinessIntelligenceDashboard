@@ -123,4 +123,65 @@ void calculateMonthlyRevenue(
             monthlyRevenue[month - 1] += sales[i].revenue;
         }
     }
+
+    
+}
+
+int calculateCategoryRevenue(
+    const Sale sales[],
+    int count,
+    CategoryRevenue categories[],
+    int maxCategories
+)
+{
+    if (sales == NULL || categories == NULL ||
+        count <= 0 || maxCategories <= 0)
+    {
+        return 0;
+    }
+
+    int categoryCount = 0;
+
+    for (int i = 0; i < count; i++)
+    {
+        int categoryIndex = -1;
+
+        // Check whether the category already exists.
+        for (int j = 0; j < categoryCount; j++)
+        {
+            if (strcmp(categories[j].name, sales[i].category) == 0)
+            {
+                categoryIndex = j;
+                break;
+            }
+        }
+
+        // Add a new category if necessary.
+        if (categoryIndex == -1)
+        {
+            if (categoryCount >= maxCategories)
+            {
+                fprintf(stderr, "Warning: Category limit reached.\n");
+                continue;
+            }
+
+            categoryIndex = categoryCount;
+
+            snprintf(
+                categories[categoryIndex].name,
+                sizeof(categories[categoryIndex].name),
+                "%s",
+                sales[i].category
+            );
+
+            categories[categoryIndex].revenue = 0.0;
+
+            categoryCount++;
+        }
+
+        // Add revenue to the matching category.
+        categories[categoryIndex].revenue += sales[i].revenue;
+    }
+
+    return categoryCount;
 }

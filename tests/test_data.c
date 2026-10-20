@@ -64,5 +64,34 @@ int main(void)
 
     printf("=====================================\n");
 
+    // Calculate category revenue.
+CategoryRevenue categories[MAX_CATEGORIES];
+
+int categoryCount = calculateCategoryRevenue(
+    sales,
+    count,
+    categories,
+    MAX_CATEGORIES
+);
+
+printf("\n========== CATEGORY REVENUE ==========\n");
+
+double categoryTotal = 0.0;
+
+for (int i = 0; i < categoryCount; i++)
+{
+    printf(
+        "%-15s %.2f\n",
+        categories[i].name,
+        categories[i].revenue
+    );
+
+    categoryTotal += categories[i].revenue;
+}
+
+printf("--------------------------------------\n");
+printf("Total:           %.2f\n", categoryTotal);
+printf("======================================\n");
+
     return 0;
 }
